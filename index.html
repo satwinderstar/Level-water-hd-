@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pa">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Tank Only</title>
+  <style>
+    /* ਇਹ body ਦੀ styling ਹੈ ਤਾਂ ਕਿ ਪੂਰਾ page center ਵਿੱਚ ਆਵੇ ਅਤੇ ਸਿਰਫ਼ ਟੈਂਕੀ ਹੀ ਨਜ਼ਰ ਆਵੇ */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe, #93c5fd);
+      font-family: Arial, sans-serif;
+    }
+
+    /* ThingSpeak Channel ID ਅਤੇ API Key ਭਰਨ ਲਈ panel */
+    .thingspeak-panel {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      background: rgba(255,255,255,0.55);
+      padding: 14px 16px;
+      border-radius: 14px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      border: 1px solid rgba(30,58,138,0.25);
+    }
+
+    .thingspeak-panel input {
+      width: 170px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid #1e3a8a;
+      outline: none;
+      font-size: 14px;
+    }
+
+    .thingspeak-panel button {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #1e3a8a;
+      color: white;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .thingspeak-panel button:hover {
+      background: #1d4ed8;
+    }
+
+    .live-status {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      text-align: center;
+      width: 100%;
+    }
+
+    /* ਇਹ outer wrapper ਹੈ ਜੋ ਟੈਂਕੀ ਅਤੇ percentage text ਨੂੰ ਇਕੱਠੇ center ਵਿੱਚ ਰੱਖਦਾ ਹੈ */
+    .tank-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    /* ਇਹ main tank container ਹੈ */
+    .water-tank {
+      position: relative;
+      width: 260px;
+      height: 360px;
+      border: 6px solid #1e3a8a;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.25);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.20), inset 0 0 18px rgba(255,255,255,0.35);
+      overflow: hidden;
+    }
+
+    /* ਇਹ ਟੈਂਕੀ ਦਾ ਉੱਪਰ ਵਾਲਾ lid ਹੈ */
+    .tank-lid {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 210px;
+      height: 22px;
+      background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+      border-radius: 14px;
+      border: 2px solid #1e3a8a;
+      z-index: 5;
+    }
+
+    /* ਇਹ ਟੈਂਕੀ ਦੇ ਅੰਦਰ ਵਾਲਾ actual water area ਹੈ */
+    .water-fill {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 0%;
+      background: linear-gradient(to top, #16a34a, #4ade80, #86efac);
+      transition: height 3s ease-in-out;
+    }
+
+    /* ਇਹ water surface ਹੈ, ਜਿਸ ਨਾਲ ਉੱਪਰ wave ਜਿਹਾ ਲੁੱਕ ਆਉਂਦਾ ਹੈ */
+    .water-fill::before {
+      content: "";
+      position: absolute;
+      top: -12px;
+      left: -20%;
+      width: 140%;
+      height: 30px;
+      background: rgba(255,255,255,0.30);
+      border-radius: 50%;
+      animation: waveMove 2.5s ease-in-out infinite;
+    }
+
+    /* ਇਹ extra shine layer ਹੈ ਤਾਂ ਕਿ ਪਾਣੀ glassy ਲੱਗੇ */
+    .water-fill::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 12%;
+      width: 24%;
+      height: 100%;
+      background: linear-gradient(to right, rgba(255,255,255,0.32), rgba(255,255,255,0.05));
+      transform: skewX(-10deg);
+    }
+
+    /* ਇਹ ribs ਹਨ ਜੋ ਟੈਂਕੀ ਦੇ ਸਟੈਪਾਂ ਵਰਗਾ ਲੁੱਕ ਦੇਣ ਲਈ ਹਨ */
+    .rib {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255,255,255,0.35);
+      z-index: 4;
+    }
+
+    .rib1  { top: 35px; }
+    .rib2  { top: 65px; }
+    .rib3  { top: 95px; }
+    .rib4  { top: 125px; }
+    .rib5  { top: 155px; }
+    .rib6  { top: 185px; }
+    .rib7  { top: 215px; }
+    .rib8  { top: 245px; }
+    .rib9  { top: 275px; }
+    .rib10 { top: 305px; }
+
+    /* ਇਹ percentage value ਦਿਖਾਉਣ ਲਈ ਹੈ */
+    .tank-value {
+      font-size: 34px;
+      font-weight: bold;
+      color: #1e3a8a;
+      text-shadow: 0 2px 8px rgba(255,255,255,0.7);
+    }
+
+    /* ਇਹ label optional ਹੈ - ਦੱਸਦਾ ਹੈ ਕਿ ਇਹ water level ਹੈ */
+    .tank-label {
+      font-size: 18px;
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    /* ਇਹ wave animation ਹੈ ਤਾਂ ਕਿ ਉੱਪਰ ਵਾਲੀ water line ਹਿੱਲਦੀ ਰਹੇ */
+    @keyframes waveMove {
+      0% {
+        transform: translateX(0) scaleX(1);
+        border-radius: 45% 55% 60% 40% / 40% 40% 60% 60%;
+      }
+      50% {
+        transform: translateX(-12px) scaleX(1.03);
+        border-radius: 55% 45% 40% 60% / 60% 45% 55% 40%;
+      }
+      100% {
+        transform: translateX(0) scaleX(1);
+        border-radius: 45% 55% 60% 40% / 40% 40% 60% 60%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ਇਹ ThingSpeak ਦੀ Channel ID ਅਤੇ Read API Key ਭਰਨ ਲਈ option ਹੈ -->
+  <div class="thingspeak-panel">
+    <input type="text" id="channelId" placeholder="Channel ID ਭਰੋ">
+    <input type="text" id="readApiKey" placeholder="Read API Key ਭਰੋ">
+    <button onclick="startThingSpeak()">Start Live</button>
+    <div class="live-status" id="liveStatus">ThingSpeak ਨਾਲ connect ਨਹੀਂ ਹੋਇਆ</div>
+  </div>
+
+  <!-- ਇਹ wrapper ਟੈਂਕੀ ਅਤੇ text ਨੂੰ ਇਕੱਠਾ ਰੱਖਦਾ ਹੈ -->
+  <div class="tank-wrapper">
+
+    <!-- ਇਹ water tank ਦਾ main box ਹੈ -->
+    <div class="water-tank">
+
+      <!-- ਇਹ lid ਹੈ -->
+      <div class="tank-lid"></div>
+
+      <!-- ਇਹ actual water fill container ਹੈ, JS ਇਸਦੀ height ਬਦਲੇਗਾ -->
+      <div class="water-fill" id="waterFill"></div>
+
+      <!-- ਇਹ ribs ਹਨ -->
+      <div class="rib rib1"></div>
+      <div class="rib rib2"></div>
+      <div class="rib rib3"></div>
+      <div class="rib rib4"></div>
+      <div class="rib rib5"></div>
+      <div class="rib rib6"></div>
+      <div class="rib rib7"></div>
+      <div class="rib rib8"></div>
+      <div class="rib rib9"></div>
+      <div class="rib rib10"></div>
+    </div>
+
+    <!-- ਇਹ value display ਹੈ -->
+    <div class="tank-value" id="tankValue">0%</div>
+
+    <!-- ਇਹ label ਹੈ -->
+    <div class="tank-label">Water Level</div>
+  </div>
+
+  <script>
+    /* ਇਹ water fill ਵਾਲਾ div ਲਿਆ */
+    const waterFill = document.getElementById('waterFill');
+
+    /* ਇਹ percentage text ਵਾਲਾ div ਲਿਆ */
+    const tankValue = document.getElementById('tankValue');
+
+    /* ਇਹ live status text ਵਾਲਾ div ਲਿਆ */
+    const liveStatus = document.getElementById('liveStatus');
+
+    /* ThingSpeak real time update ਲਈ interval */
+    let thingSpeakInterval = null;
+
+    /* ਇਹ function ThingSpeak ਤੋਂ data ਲੈਣਾ start ਕਰੇਗਾ */
+    function startThingSpeak() {
+      const channelId = document.getElementById('channelId').value.trim();
+      const readApiKey = document.getElementById('readApiKey').value.trim();
+
+      if (channelId === "" || readApiKey === "") {
+        alert("ਕਿਰਪਾ ਕਰਕੇ Channel ID ਅਤੇ Read API Key ਭਰੋ");
+        return;
+      }
+
+      if (thingSpeakInterval !== null) {
+        clearInterval(thingSpeakInterval);
+      }
+
+      liveStatus.textContent = "ThingSpeak ਨਾਲ connect ਹੋ ਰਿਹਾ ਹੈ...";
+
+      fetchThingSpeakData(channelId, readApiKey);
+
+      /* ThingSpeak free limit ਕਰਕੇ 15 seconds ਬਾਅਦ update */
+      thingSpeakInterval = setInterval(() => {
+        fetchThingSpeakData(channelId, readApiKey);
+      }, 15000);
+    }
+
+    /* ਇਹ function ThingSpeak Field 1 ਤੋਂ latest value ਲਵੇਗਾ */
+    async function fetchThingSpeakData(channelId, readApiKey) {
+      const url = `https://api.thingspeak.com/channels/${channelId}/fields/1.json?api_key=${readApiKey}&results=1`;
+
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.feeds && data.feeds.length > 0) {
+          const value = data.feeds[0].field1;
+
+          if (value !== null && value !== undefined && value !== "") {
+            updateTank(value);
+
+            const time = new Date().toLocaleTimeString();
+            liveStatus.textContent = "Live Data Updated: " + time;
+          } else {
+            liveStatus.textContent = "Field 1 ਵਿੱਚ data ਨਹੀਂ ਮਿਲਿਆ";
+          }
+        } else {
+          liveStatus.textContent = "ThingSpeak ਤੋਂ data ਨਹੀਂ ਮਿਲਿਆ";
+        }
+
+      } catch (error) {
+        liveStatus.textContent = "Connection Error / API Key ਜਾਂ Channel ID check ਕਰੋ";
+      }
+    }
+
+    /* ਇਹ function ਟੈਂਕੀ ਦਾ water level update ਕਰੇਗਾ */
+    function updateTank(value) {
+      let waterPercentage = parseFloat(value);
+
+      if (isNaN(waterPercentage)) {
+        liveStatus.textContent = "ThingSpeak value number ਨਹੀਂ ਹੈ";
+        return;
+      }
+
+      if (waterPercentage < 0) {
+        waterPercentage = 0;
+      }
+
+      if (waterPercentage > 100) {
+        waterPercentage = 100;
+      }
+
+      waterFill.style.height = waterPercentage + '%';
+      tankValue.textContent = Math.round(waterPercentage) + '%';
+    }
+  </script>
+
+</body>
+</html>
