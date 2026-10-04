@@ -25,14 +25,16 @@
   </script>
 
   <style>
-    * { -webkit-tap-highlight-color: transparent; }
-    body {
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    html, body {
       background-color: #02050b;
       color: #e2e8f0;
       user-select: none;
       -webkit-user-select: none;
       overflow-x: hidden;
       touch-action: manipulation;
+      margin: 0;
+      padding: 0;
     }
 
     .glass-panel {
@@ -65,7 +67,6 @@
       background-size: 40px 40px;
     }
 
-    /* Tank image container - aspect ratio fixed */
     .tank-stage {
       position: relative;
       width: 100%;
@@ -74,7 +75,7 @@
       margin: 0 auto;
     }
 
-    .tank-stage img {
+    .tank-stage > img {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -82,56 +83,106 @@
       object-fit: contain;
     }
 
-    /* Calibration overlay */
+    /* ============================================================ */
+    /* CALIBRATION OVERLAY - FIXED VERSION                          */
+    /* ============================================================ */
     #calibrationOverlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.92);
+      background: rgba(0, 0, 0, 0.95);
       z-index: 9999;
       display: none;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       padding: 12px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     #calibrationOverlay.active { display: flex; }
 
+    #calibHeader {
+      width: 100%;
+      max-width: 600px;
+      text-align: center;
+      padding: 8px 0;
+      flex-shrink: 0;
+    }
+
     #calibImageWrap {
       position: relative;
-      max-width: 100%;
-      max-height: 60vh;
       display: inline-block;
+      line-height: 0;
+      max-width: 100%;
+      margin: 8px 0;
+      touch-action: none;
+      flex-shrink: 0;
     }
+
     #calibImageWrap img {
       display: block;
-      max-width: 100%;
-      max-height: 60vh;
+      max-width: 90vw;
+      max-height: 55vh;
+      width: auto;
+      height: auto;
       user-select: none;
       -webkit-user-drag: none;
+      pointer-events: none;
     }
+
     #calibBox {
       position: absolute;
       border: 2px dashed #00f0ff;
-      background: rgba(0, 240, 255, 0.15);
+      background: rgba(0, 240, 255, 0.18);
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.5), inset 0 0 20px rgba(0, 240, 255, 0.15);
       cursor: move;
-      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+      touch-action: none;
+      box-sizing: border-box;
     }
+
+    /* Corner handles - larger for touch */
     .calib-handle {
       position: absolute;
-      width: 18px;
-      height: 18px;
+      width: 28px;
+      height: 28px;
       background: #00f0ff;
-      border: 2px solid #02050b;
+      border: 3px solid #02050b;
       border-radius: 50%;
-      box-shadow: 0 0 8px #00f0ff;
+      box-shadow: 0 0 12px #00f0ff;
+      touch-action: none;
+      z-index: 10;
     }
-    .calib-handle.tl { top: -9px; left: -9px; cursor: nwse-resize; }
-    .calib-handle.tr { top: -9px; right: -9px; cursor: nesw-resize; }
-    .calib-handle.bl { bottom: -9px; left: -9px; cursor: nesw-resize; }
-    .calib-handle.br { bottom: -9px; right: -9px; cursor: nwse-resize; }
+    .calib-handle.tl { top: -14px; left: -14px; cursor: nwse-resize; }
+    .calib-handle.tr { top: -14px; right: -14px; cursor: nesw-resize; }
+    .calib-handle.bl { bottom: -14px; left: -14px; cursor: nesw-resize; }
+    .calib-handle.br { bottom: -14px; right: -14px; cursor: nwse-resize; }
+
+    /* Center move indicator */
+    .calib-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(0, 240, 255, 0.15);
+      border: 2px solid rgba(0, 240, 255, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .calib-center::before {
+      content: '✥';
+      color: #00f0ff;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 0 0 8px #00f0ff;
+    }
 
     .calib-btn {
-      padding: 10px 20px;
+      padding: 12px 24px;
       border-radius: 10px;
       font-family: 'Orbitron', sans-serif;
       font-weight: 700;
@@ -142,15 +193,22 @@
       color: #00f0ff;
       cursor: pointer;
       transition: all 0.2s;
+      touch-action: manipulation;
     }
     .calib-btn:hover, .calib-btn:active {
-      background: rgba(0, 240, 255, 0.25);
-      box-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+      background: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+      transform: scale(0.97);
     }
 
-    /* Mobile adjustments */
     @media (max-width: 640px) {
       .tank-stage { max-width: 92vw; }
+      #calibImageWrap img { max-height: 50vh; }
+      .calib-handle { width: 24px; height: 24px; }
+      .calib-handle.tl { top: -12px; left: -12px; }
+      .calib-handle.tr { top: -12px; right: -12px; }
+      .calib-handle.bl { bottom: -12px; left: -12px; }
+      .calib-handle.br { bottom: -12px; right: -12px; }
     }
   </style>
 </head>
@@ -203,7 +261,6 @@
     <!-- CENTER TANK STAGE -->
     <div class="w-full order-1 lg:order-2 flex flex-col items-center">
       <div class="tank-stage" id="tankStage">
-        <!-- TANK IMAGE (ਇੱਥੇ ਆਪਣੀ ਫੋਟੋ ਦਾ ਨਾਮ ਪਾਓ) -->
         <img 
           id="tankImage"
           src="tank.jpg" 
@@ -211,13 +268,11 @@
           onerror="this.style.opacity='0.15'; this.parentElement.classList.add('bg-slate-900');"
         />
 
-        <!-- LIQUID CANVAS OVERLAY (ਇਹ ਟੈਂਕ ਦੇ ਅੰਦਰ ਪਾਣੀ ਦਿਖਾਏਗਾ) -->
         <div id="liquidCanvasContainer" class="absolute overflow-hidden" 
              style="left: 30%; width: 40%; top: 25%; height: 55%;">
           <canvas id="liquidCanvas" class="w-full h-full block"></canvas>
         </div>
 
-        <!-- PERCENTAGE TRACKER -->
         <div id="trackerTag" class="absolute z-30 flex items-center transition-all duration-500 ease-out pointer-events-none" 
              style="left: 72%; top: 80%;">
           <div class="w-5 h-[1px] bg-cyan-400 shadow-[0_0_5px_#00f0ff]"></div>
@@ -227,14 +282,12 @@
           </div>
         </div>
 
-        <!-- LIVE BADGE -->
         <div class="absolute top-2 left-2 z-30 glass-panel px-2 py-1 rounded-full border-cyan-400/40 flex items-center gap-1.5">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 live-dot"></span>
           <span class="text-[9px] font-mono text-cyan-300 tracking-widest">LIVE</span>
         </div>
       </div>
 
-      <!-- CALIBRATION BUTTON -->
       <button id="btnCalibrate" class="calib-btn mt-3 md:mt-4">
         ⚙ CALIBRATE TANK AREA
       </button>
@@ -257,7 +310,7 @@
     </aside>
   </main>
 
-  <!-- FOOTER INFO -->
+  <!-- FOOTER -->
   <footer class="w-full max-w-3xl mx-auto p-3 md:p-4 mb-2 z-20">
     <div class="glass-panel p-3 md:p-4 rounded-2xl border-cyan-500/20 shadow-xl">
       <div class="grid grid-cols-3 gap-2 text-center">
@@ -278,20 +331,28 @@
   </footer>
 
   <!-- ============================================ -->
-  <!-- CALIBRATION OVERLAY                          -->
+  <!-- CALIBRATION OVERLAY - COMPLETELY REWRITTEN   -->
   <!-- ============================================ -->
   <div id="calibrationOverlay">
-    <div class="text-cyan-300 font-display text-sm md:text-base mb-3 tracking-widest text-center">
-      ਟੈਂਕ ਦੇ ਅੰਦਰਲੇ ਹਿੱਸੇ ਨੂੰ ਚੁਣੋ
-    </div>
-    <div class="text-slate-400 font-mono text-[10px] md:text-xs mb-3 text-center px-4">
-      Box ਨੂੰ ਟੈਂਕ ਦੇ ਅੰਦਰ ਖਿੱਚੋ ਤੇ ਕੋਨਿਆਂ ਨਾਲ Size ਸੈੱਟ ਕਰੋ
+    <div id="calibHeader">
+      <!-- TOP LINE -->
+      <div class="text-cyan-300 font-display text-base md:text-lg mb-2 tracking-wider">
+        Select the inside of the tank.
+      </div>
+      <!-- BOTTOM LINE -->
+      <div class="text-slate-400 font-mono text-[11px] md:text-xs mb-3 leading-relaxed">
+        Drag the box inside the tank and adjust the size with the corners.
+      </div>
+      <div class="text-cyan-500/70 font-mono text-[10px] tracking-widest">
+        ▼ TANK IMAGE PREVIEW ▼
+      </div>
     </div>
 
     <div id="calibImageWrap">
       <img id="calibImage" src="tank.jpg" alt="Calibrate"
-           onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22><rect width=%22400%22 height=%22400%22 fill=%22%23111827%22/><text x=%22200%22 y=%22200%22 fill=%22%2364748b%22 font-size=%2216%22 text-anchor=%22middle%22>tank.jpg not found</text></svg>'" />
+           onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22><rect width=%22400%22 height=%22400%22 fill=%22%23111827%22 stroke=%22%2300f0ff%22 stroke-width=%222%22/><text x=%22200%22 y=%22190%22 fill=%22%2300f0ff%22 font-size=%2216%22 text-anchor=%22middle%22 font-family=%22monospace%22>tank.jpg</text><text x=%22200%22 y=%22220%22 fill=%22%23f43f5e%22 font-size=%2214%22 text-anchor=%22middle%22 font-family=%22monospace%22>NOT FOUND</text><text x=%22200%22 y=%22250%22 fill=%22%2364748b%22 font-size=%2211%22 text-anchor=%22middle%22 font-family=%22monospace%22>Place your tank photo here</text></svg>'" />
       <div id="calibBox">
+        <div class="calib-center"></div>
         <div class="calib-handle tl" data-handle="tl"></div>
         <div class="calib-handle tr" data-handle="tr"></div>
         <div class="calib-handle bl" data-handle="bl"></div>
@@ -299,9 +360,18 @@
       </div>
     </div>
 
-    <div class="flex gap-3 mt-5">
-      <button id="btnCalibCancel" class="calib-btn" style="border-color:#f43f5e;color:#f43f5e;background:rgba(244,63,94,0.1);">CANCEL</button>
-      <button id="btnCalibSave" class="calib-btn">✓ SAVE AREA</button>
+    <!-- Live preview of selected values -->
+    <div class="font-mono text-[10px] text-cyan-400/80 mt-2 mb-2">
+      X: <span id="calibValX">30</span>% &nbsp;|&nbsp; 
+      Y: <span id="calibValY">25</span>% &nbsp;|&nbsp; 
+      W: <span id="calibValW">40</span>% &nbsp;|&nbsp; 
+      H: <span id="calibValH">55</span>%
+    </div>
+
+    <div class="flex gap-3 mt-2 mb-6">
+      <button id="btnCalibReset" class="calib-btn" style="border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,0.1);">↺ RESET</button>
+      <button id="btnCalibCancel" class="calib-btn" style="border-color:#f43f5e;color:#f43f5e;background:rgba(244,63,94,0.1);">✕ CANCEL</button>
+      <button id="btnCalibSave" class="calib-btn">✓ SAVE</button>
     </div>
   </div>
 
@@ -311,7 +381,7 @@
     // ============================================================
     const THINGSPEAK_CHANNEL_ID = 3354981;
     const THINGSPEAK_FIELD = 1;
-    const THINGSPEAK_READ_API_KEY = ''; // ਪ੍ਰਾਈਵੇਟ ਹੋਵੇ ਤਾਂ key ਪਾਓ
+    const THINGSPEAK_READ_API_KEY = '';
     const POLL_INTERVAL_MS = 15000;
 
     // ============================================================
@@ -323,13 +393,15 @@
     let isConnected = false;
     const MAX_CAPACITY_L = 10000;
 
-    // Tank calibration (as % of image width/height)
-    let tankRect = { left: 30, top: 25, width: 40, height: 55 };
+    const DEFAULT_RECT = { x: 30, y: 25, w: 40, h: 55 };
+    let tankRect = { ...DEFAULT_RECT };
 
-    // Load saved calibration
     try {
       const saved = localStorage.getItem('nexa_tank_calib');
-      if (saved) tankRect = JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.x === 'number') tankRect = parsed;
+      }
     } catch(e) {}
 
     // ============================================================
@@ -338,7 +410,6 @@
     const canvas = document.getElementById('liquidCanvas');
     const ctx = canvas.getContext('2d');
     const container = document.getElementById('liquidCanvasContainer');
-    const tankStage = document.getElementById('tankStage');
     const trackerTag = document.getElementById('trackerTag');
     const trackerPercent = document.getElementById('trackerPercent');
 
@@ -352,17 +423,15 @@
     const connDot = document.getElementById('connDot');
 
     // ============================================================
-    // APPLY CALIBRATION
+    // APPLY CALIBRATION TO DISPLAY
     // ============================================================
     function applyCalibration() {
-      container.style.left = tankRect.left + '%';
-      container.style.top = tankRect.top + '%';
-      container.style.width = tankRect.width + '%';
-      container.style.height = tankRect.height + '%';
+      container.style.left = tankRect.x + '%';
+      container.style.top = tankRect.y + '%';
+      container.style.width = tankRect.w + '%';
+      container.style.height = tankRect.h + '%';
 
-      // Tracker position (right side of tank)
-      trackerTag.style.left = (tankRect.left + tankRect.width + 2) + '%';
-      trackerTag.style.top = (tankRect.top + tankRect.height) + '%';
+      trackerTag.style.left = (tankRect.x + tankRect.w + 2) + '%';
 
       resizeCanvas();
     }
@@ -383,7 +452,7 @@
     window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 300));
 
     // ============================================================
-    // THINGSPEAK FETCH
+    // THINGSPEAK
     // ============================================================
     async function fetchThingSpeakData() {
       try {
@@ -400,7 +469,7 @@
           rawSensorValue = parseFloat(data[fieldKey]);
           lastUpdateTime = data.created_at ? new Date(data.created_at) : new Date();
 
-          // INVERTED MAPPING: field 25 → 75% level
+          // INVERTED: field 25 → 75% level
           let level = 100 - rawSensorValue;
           waterLevel = Math.max(0, Math.min(100, level));
 
@@ -435,9 +504,8 @@
       uiVolume.textContent = Math.round((waterLevel / 100) * MAX_CAPACITY_L).toLocaleString();
       uiRaw.textContent = rawSensorValue !== null ? rawSensorValue.toFixed(1) : '--';
 
-      // Tracker Y position inside tank area
-      const trackerMinTop = tankRect.top;
-      const trackerMaxTop = tankRect.top + tankRect.height;
+      const trackerMinTop = tankRect.y;
+      const trackerMaxTop = tankRect.y + tankRect.h;
       const currentTop = trackerMaxTop - (waterLevel / 100) * (trackerMaxTop - trackerMinTop);
       trackerTag.style.top = currentTop + '%';
 
@@ -465,7 +533,7 @@
     }
 
     // ============================================================
-    // RENDER LOOP (Realistic Water)
+    // RENDER LOOP
     // ============================================================
     let wavePhase = 0;
     let lastTime = performance.now();
@@ -490,7 +558,6 @@
           const waveAmplitude = w * 0.012;
           wavePhase += 0.05;
 
-          // === LIQUID BODY ===
           ctx.save();
           ctx.beginPath();
           ctx.moveTo(0, h);
@@ -505,7 +572,6 @@
           ctx.lineTo(w, h);
           ctx.closePath();
 
-          // Realistic water gradient (deep blue → bright cyan surface)
           const fluidGradient = ctx.createLinearGradient(0, surfaceY, 0, h);
           fluidGradient.addColorStop(0.0, 'rgba(120, 230, 255, 0.95)');
           fluidGradient.addColorStop(0.15, 'rgba(0, 200, 255, 0.85)');
@@ -515,7 +581,6 @@
           ctx.fillStyle = fluidGradient;
           ctx.fill();
 
-          // === GLOWING SURFACE LINE ===
           ctx.lineWidth = 2.5;
           ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
           ctx.shadowColor = '#00ffff';
@@ -540,72 +605,123 @@
     }
 
     // ============================================================
-    // CALIBRATION TOOL
+    // CALIBRATION TOOL - COMPLETELY REWRITTEN
     // ============================================================
     const overlay = document.getElementById('calibrationOverlay');
     const calibImageWrap = document.getElementById('calibImageWrap');
     const calibImage = document.getElementById('calibImage');
     const calibBox = document.getElementById('calibBox');
-    let calibState = { x: 30, y: 25, w: 40, h: 55 }; // percentages
-    let isDragging = false, dragMode = null, dragStart = null;
 
-    document.getElementById('btnCalibrate').addEventListener('click', () => {
+    const calibValX = document.getElementById('calibValX');
+    const calibValY = document.getElementById('calibValY');
+    const calibValW = document.getElementById('calibValW');
+    const calibValH = document.getElementById('calibValH');
+
+    let calibState = { ...DEFAULT_RECT };
+    let dragMode = null;
+    let dragStart = null;
+    let dragStartState = null;
+
+    // ------------------------------------------------------------
+    // OPEN CALIBRATION
+    // ------------------------------------------------------------
+    document.getElementById('btnCalibrate').addEventListener('click', (e) => {
+      e.preventDefault();
       calibState = { ...tankRect };
       overlay.classList.add('active');
-      setTimeout(updateCalibBox, 50);
+      // Wait for layout, then position box
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          positionCalibBox();
+          updateCalibValues();
+        });
+      });
     });
 
-    document.getElementById('btnCalibCancel').addEventListener('click', () => {
+    // ------------------------------------------------------------
+    // CLOSE / CANCEL
+    // ------------------------------------------------------------
+    document.getElementById('btnCalibCancel').addEventListener('click', (e) => {
+      e.preventDefault();
       overlay.classList.remove('active');
+      dragMode = null;
     });
 
-    document.getElementById('btnCalibSave').addEventListener('click', () => {
+    // ------------------------------------------------------------
+    // RESET
+    // ------------------------------------------------------------
+    document.getElementById('btnCalibReset').addEventListener('click', (e) => {
+      e.preventDefault();
+      calibState = { ...DEFAULT_RECT };
+      positionCalibBox();
+      updateCalibValues();
+    });
+
+    // ------------------------------------------------------------
+    // SAVE
+    // ------------------------------------------------------------
+    document.getElementById('btnCalibSave').addEventListener('click', (e) => {
+      e.preventDefault();
       tankRect = { ...calibState };
       try { localStorage.setItem('nexa_tank_calib', JSON.stringify(tankRect)); } catch(e) {}
       applyCalibration();
       overlay.classList.remove('active');
+      dragMode = null;
     });
 
-    function updateCalibBox() {
-      const wrapRect = calibImageWrap.getBoundingClientRect();
+    // ------------------------------------------------------------
+    // POSITION THE BOX
+    // ------------------------------------------------------------
+    function positionCalibBox() {
       calibBox.style.left = calibState.x + '%';
       calibBox.style.top = calibState.y + '%';
       calibBox.style.width = calibState.w + '%';
       calibBox.style.height = calibState.h + '%';
     }
 
-    // Pointer events on box (drag to move)
-    calibBox.addEventListener('pointerdown', (e) => {
-      if (e.target.classList.contains('calib-handle')) return;
+    function updateCalibValues() {
+      calibValX.textContent = calibState.x.toFixed(1);
+      calibValY.textContent = calibState.y.toFixed(1);
+      calibValW.textContent = calibState.w.toFixed(1);
+      calibValH.textContent = calibState.h.toFixed(1);
+    }
+
+    // ------------------------------------------------------------
+    // START DRAG - Attach to box AND handles
+    // ------------------------------------------------------------
+    function startDrag(e, mode) {
       e.preventDefault();
-      isDragging = true;
-      dragMode = 'move';
-      dragStart = { x: e.clientX, y: e.clientY, ...calibState };
-      calibBox.setPointerCapture(e.pointerId);
-    });
+      e.stopPropagation();
 
-    // Pointer events on handles (drag to resize)
-    calibBox.querySelectorAll('.calib-handle').forEach(h => {
-      h.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        isDragging = true;
-        dragMode = h.dataset.handle;
-        dragStart = { x: e.clientX, y: e.clientY, ...calibState };
-        h.setPointerCapture(e.pointerId);
-      });
-    });
+      const touch = e.touches ? e.touches[0] : e;
+      dragMode = mode;
+      dragStart = { x: touch.clientX, y: touch.clientY };
+      dragStartState = { ...calibState };
 
-    calibBox.addEventListener('pointermove', (e) => {
-      if (!isDragging) return;
+      // Attach move/up listeners to document (works even if pointer leaves box)
+      document.addEventListener('mousemove', onDragMove, { passive: false });
+      document.addEventListener('mouseup', onDragEnd);
+      document.addEventListener('touchmove', onDragMove, { passive: false });
+      document.addEventListener('touchend', onDragEnd);
+      document.addEventListener('touchcancel', onDragEnd);
+    }
+
+    function onDragMove(e) {
+      if (!dragMode) return;
+      e.preventDefault();
+
+      const touch = e.touches ? e.touches[0] : e;
       const wrapRect = calibImageWrap.getBoundingClientRect();
-      const dx = ((e.clientX - dragStart.x) / wrapRect.width) * 100;
-      const dy = ((e.clientY - dragStart.y) / wrapRect.height) * 100;
+      if (wrapRect.width === 0 || wrapRect.height === 0) return;
 
-      let { x, y, w, h } = dragStart;
+      const dx = ((touch.clientX - dragStart.x) / wrapRect.width) * 100;
+      const dy = ((touch.clientY - dragStart.y) / wrapRect.height) * 100;
+
+      let { x, y, w, h } = dragStartState;
 
       if (dragMode === 'move') {
-        x += dx; y += dy;
+        x += dx;
+        y += dy;
       } else if (dragMode === 'tl') {
         x += dx; y += dy; w -= dx; h -= dy;
       } else if (dragMode === 'tr') {
@@ -616,19 +732,70 @@
         w += dx; h += dy;
       }
 
-      // Clamp
-      w = Math.max(5, Math.min(100, w));
-      h = Math.max(5, Math.min(100, h));
-      x = Math.max(0, Math.min(100 - w, x));
-      y = Math.max(0, Math.min(100 - h, y));
+      // Minimum size
+      const MIN_W = 5, MIN_H = 5;
+      if (w < MIN_W) {
+        if (dragMode === 'tl' || dragMode === 'bl') x = dragStartState.x + dragStartState.w - MIN_W;
+        w = MIN_W;
+      }
+      if (h < MIN_H) {
+        if (dragMode === 'tl' || dragMode === 'tr') y = dragStartState.y + dragStartState.h - MIN_H;
+        h = MIN_H;
+      }
+
+      // Clamp to image bounds
+      if (x < 0) { w += x; x = 0; }
+      if (y < 0) { h += y; y = 0; }
+      if (x + w > 100) w = 100 - x;
+      if (y + h > 100) h = 100 - y;
+
+      // Final safety
+      w = Math.max(MIN_W, w);
+      h = Math.max(MIN_H, h);
 
       calibState = { x, y, w, h };
-      updateCalibBox();
+      positionCalibBox();
+      updateCalibValues();
+    }
+
+    function onDragEnd() {
+      dragMode = null;
+      dragStart = null;
+      dragStartState = null;
+      document.removeEventListener('mousemove', onDragMove);
+      document.removeEventListener('mouseup', onDragEnd);
+      document.removeEventListener('touchmove', onDragMove);
+      document.removeEventListener('touchend', onDragEnd);
+      document.removeEventListener('touchcancel', onDragEnd);
+    }
+
+    // ------------------------------------------------------------
+    // ATTACH LISTENERS
+    // ------------------------------------------------------------
+    // Box itself → move mode
+    calibBox.addEventListener('mousedown', (e) => {
+      if (e.target.classList.contains('calib-handle')) return;
+      startDrag(e, 'move');
+    });
+    calibBox.addEventListener('touchstart', (e) => {
+      if (e.target.classList.contains('calib-handle')) return;
+      startDrag(e, 'move');
+    }, { passive: false });
+
+    // Handles → resize mode
+    calibBox.querySelectorAll('.calib-handle').forEach(handle => {
+      const mode = handle.dataset.handle;
+
+      handle.addEventListener('mousedown', (e) => {
+        startDrag(e, mode);
+      });
+      handle.addEventListener('touchstart', (e) => {
+        startDrag(e, mode);
+      }, { passive: false });
     });
 
-    ['pointerup', 'pointercancel'].forEach(evt => {
-      calibBox.addEventListener(evt, () => { isDragging = false; dragMode = null; });
-    });
+    // Prevent overlay from scrolling when touching the box
+    calibBox.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
 
     // ============================================================
     // BOOTSTRAP
